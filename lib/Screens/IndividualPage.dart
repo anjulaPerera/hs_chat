@@ -18,7 +18,7 @@ class _IndividualPageState extends State<IndividualPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.amber,
+      backgroundColor: Colors.green.shade100,
       appBar: AppBar(
         // backgroundColor: const Color(0xFF075E54),
         titleSpacing: 0,
