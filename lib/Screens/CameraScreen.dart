@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:hs_chat/Screens/CameraView.dart';
@@ -17,6 +19,9 @@ class _CameraScreenState extends State<CameraScreen> {
   late CameraController _cameraController;
 
   late Future<void> cameraValue;
+  bool flash = false;
+  bool isCameraFront = false;
+  double transform = pi;
 
   @override
   void initState() {
@@ -35,6 +40,11 @@ class _CameraScreenState extends State<CameraScreen> {
 
   @override
   Widget build(BuildContext context) {
+    var _picturePath;
+    if (_picturePath != null) {
+      Navigator.of(context).push(MaterialPageRoute(
+          builder: (context) => CameraView(path: _picturePath)));
+    }
     return Scaffold(
       body: Stack(
         children: [
@@ -42,7 +52,10 @@ class _CameraScreenState extends State<CameraScreen> {
               future: cameraValue,
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.done) {
-                  return CameraPreview(_cameraController);
+                  return Container(
+                      width: MediaQuery.of(context).size.width,
+                      height: MediaQuery.of(context).size.height,
+                      child: CameraPreview(_cameraController));
                 } else {
                   return const Center(
                     child: CircularProgressIndicator(),
@@ -65,34 +78,24 @@ class _CameraScreenState extends State<CameraScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
                       IconButton(
-                        onPressed: () {},
-                        icon: const Icon(
-                          Icons.flash_off,
-                          color: Colors.white,
-                          size: 28,
-                        ),
-                      ),
-                      GestureDetector(
-                        // onLongPress: () async {
-                        //   final path = join(
-                        //       (await getTemporaryDirectory()).path,
-                        //       "${DateTime.now()}.mp4");
-                        //   await _cameraController.startVideoRecording();
-                        // },
-                        onLongPressUp: () {},
-                        onTap: () async {
-                          final path = join(
-                              (await getTemporaryDirectory()).path,
-                              "${DateTime.now()}.png");
-                          XFile picture = await _cameraController.takePicture();
-                          picture.saveTo(path);
-                          final navigator = Navigator.of(context);
-                          navigator.push(MaterialPageRoute(
-                              builder: (context) => CameraView(path: path)));
+                          onPressed: () {
+                            setState(() {
+                              flash = !flash;
+                            });
+                            flash
+                                ? _cameraController
+                                    .setFlashMode(FlashMode.torch)
+                                : _cameraController.setFlashMode(FlashMode.off);
+                          },
+                          icon: Icon(
+                            flash ? Icons.flash_on : Icons.flash_off,
+                            color: Colors.white,
+                            size: 28,
+                          )),
+                      InkWell(
+                        onTap: () {
+                          takePhoto(context);
                         },
-                        // onTap: () {
-                        //   takePhoto(context);
-                        // },
                         child: const Icon(
                           Icons.panorama_fish_eye,
                           color: Colors.white,
@@ -100,11 +103,23 @@ class _CameraScreenState extends State<CameraScreen> {
                         ),
                       ),
                       IconButton(
-                        onPressed: () {},
-                        icon: const Icon(
-                          Icons.flip_camera_ios,
-                          color: Colors.white,
-                          size: 28,
+                        onPressed: () async {
+                          setState(() {
+                            isCameraFront = !isCameraFront;
+                            transform = transform + pi;
+                          });
+                          int cameraPos = isCameraFront ? 0 : 1;
+                          _cameraController = CameraController(
+                              cameras[cameraPos], ResolutionPreset.high);
+                          cameraValue = _cameraController.initialize();
+                        },
+                        icon: Transform.rotate(
+                          angle: transform,
+                          child: const Icon(
+                            Icons.flip_camera_ios,
+                            color: Colors.white,
+                            size: 28,
+                          ),
                         ),
                       ),
                     ],
@@ -126,14 +141,15 @@ class _CameraScreenState extends State<CameraScreen> {
     );
   }
 
-  // void takePhoto(BuildContext context) async {
-  //   final path =
-  //       join((await getTemporaryDirectory()).path, "${DateTime.now()}.png");
-  //   // await _cameraController.takePicture(path);
-  //   // ignore: use_build_context_synchronously
-  //   XFile picture = await _cameraController.takePicture();
-  //   picture.saveTo(path);
-  //   Navigator.push(context,
-  //       MaterialPageRoute(builder: (builder) => CameraView(path: path)));
-  // }
+  void takePhoto(BuildContext context) async {
+    XFile path = await _cameraController.takePicture();
+
+    // ignore: use_build_context_synchronously
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (builder) => CameraView(path: path.path),
+      ),
+    );
+  }
 }
